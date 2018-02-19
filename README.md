@@ -13,6 +13,7 @@ Récupérez le fichier host dans la partie **Lien** ou alors créez le avec la p
 4. Allez dans Hebergement de fichier
 5. Cliquez sur Ajouter et selectionnez votre fichier Host
 6. Une fois ajouté, cliquez sur modifier et ajouter votre compte si vous en avez un.
+7. En cas de réinstallation. Il faut relancer le service "Download Station" depuis le centre de paquet (action>>Stop action>>Lancer).
 
 # Creation du fichier host
 Sous Windows
