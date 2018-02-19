@@ -32,7 +32,7 @@ class SynoFileHosting
     private $QUERYAGAIN = 1;
     private $WAITING_TIME_DEFAULT = 1800;
     
-    private $TAB_REQUEST = array();
+    private $TAB_REQUEST = array('fname' => '');
   
     public function __construct($Url, $Username, $Password, $HostInfo) 
     {
@@ -43,7 +43,7 @@ class SynoFileHosting
 		$this->logger("[__construct] Url: ${Url}");
 		$this->logger("[__construct] Username: ${Username}");
 		$this->logger("[__construct] Password: ${Password}");
-		$this->logger("[__construct] HostInfo: ${HostInfo}");
+		$this->logger("[__construct] HostInfo: ".print_r($HostInfo,true));
 	}
   
     //se connecte et renvoie le type du compte
@@ -99,7 +99,6 @@ class SynoFileHosting
             $ret[INFO_NAME] = trim($this->HostInfo[INFO_NAME]);
         }
 		$this->logger("[GetDownloadInfo] ret : ".print_r($ret,true));
-		$this->logger("[GetDownloadInfo] ret : {$ret[INFO_NAME]}");
     
         return $ret;
     }
@@ -117,20 +116,22 @@ class SynoFileHosting
             $DownloadInfo[DOWNLOAD_ERROR] = ERR_FILE_NO_EXIST;
         }else
         {
-          $this->GenerateRequest($ret);
-          $page = $this->UrlFileFreeUrlFileFree(true);
-		  preg_match($this->FILE_URL_REGEX,$page,$urlmatch);
-          if(!empty($urlmatch[1]))
-          {
-		   
-            $DownloadInfo[DOWNLOAD_URL] = $urlmatch[1];
-          }else
-          {
-            $DownloadInfo[DOWNLOAD_ERROR] = ERR_FILE_NO_EXIST;
-          }
-          $DownloadInfo[DOWNLOAD_ISPARALLELDOWNLOAD] = true;
-          $DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
-          $DownloadInfo[DOWNLOAD_COOKIE] = $this->COOKIE_FILE;
+			preg_match($this->FILE_NAME_REGEX, $page, $filenamematch);
+			if(!empty($filenamematch[1]))
+			{
+				$this->TAB_REQUEST[$this->STRING_FNAME] = $filenamematch[1];
+			}
+		  
+			$page = $this->UrlFileFreeUrlFileFree(true);
+			preg_match($this->FILE_URL_REGEX,$page,$urlmatch);
+			if(!empty($urlmatch[1])) {
+				$DownloadInfo[DOWNLOAD_URL] = $urlmatch[1];
+			} else {
+				$DownloadInfo[DOWNLOAD_ERROR] = ERR_FILE_NO_EXIST;
+			}
+			$DownloadInfo[DOWNLOAD_ISPARALLELDOWNLOAD] = true;
+			$DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
+			$DownloadInfo[DOWNLOAD_COOKIE] = $this->COOKIE_FILE;
         }
 		$this->logger("[DownloadPremium] DownloadInfo : {$DownloadInfo[DOWNLOAD_URL]}");
 		
@@ -141,7 +142,7 @@ class SynoFileHosting
     private function DownloadWaiting($LoadCookie)
     {
 		$this->logger("[DownloadWaiting] LoadCookie : ${LoadCookie}");
-        $DowloadInfo = false;
+        $DownloadInfo = false;
         $page = $this->DownloadParsePage($LoadCookie);
 
         if($page != false)
@@ -153,17 +154,21 @@ class SynoFileHosting
                 $DownloadInfo[DOWNLOAD_ERROR] = ERR_FILE_NO_EXIST;
             }else
             {
+				preg_match($this->FILE_NAME_REGEX, $page, $filenamematch);
+				if(!empty($filenamematch[1]))
+				{
+					$this->TAB_REQUEST[$this->STRING_FNAME] = $filenamematch[1];
+				}
+				$DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
+					
                 //verifie s'il faut attendre et si c'est le cas, renvoie le temps d'attente
                 $result = $this->VerifyWaitDownload($page);
                 if($result != false)
                 {
-                    $DownloadInfo[DOWNLOAD_COUNT] = $result[$this->STRING_COUNT];
-                    $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = $this->QUERYAGAIN;
+                    $DownloadInfo[DOWNLOAD_COUNT] = (int) $result[$this->STRING_COUNT];
+                    $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = (int) $this->QUERYAGAIN;
                 }else
                 {
-                    //genere la requete pour cliquer sur "Generer le lien" et recupere le nom du fichier
-                    $this->GenerateRequest($page);
-                    $DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
                     
                     //clique sur le bouton "Generer le lien" et recupere la vrai URL
                     $page = $this->UrlFileFree($LoadCookie);
@@ -173,8 +178,8 @@ class SynoFileHosting
                         $DownloadInfo[DOWNLOAD_URL] = $urlmatch[1];
                     }else
                     {
-                        $DownloadInfo[DOWNLOAD_COUNT] = $this->WAITING_TIME_DEFAULT;
-                        $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = $this->QUERYAGAIN;
+                        $DownloadInfo[DOWNLOAD_COUNT] = (int) $this->WAITING_TIME_DEFAULT;
+                        $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = (int) $this->QUERYAGAIN;
                     }
                 }
                 $DownloadInfo[DOWNLOAD_ISPARALLELDOWNLOAD] = true;
@@ -184,24 +189,9 @@ class SynoFileHosting
                 $DownloadInfo[DOWNLOAD_COOKIE] = $this->COOKIE_FILE;
             }
         }
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_ERROR: {$DownloadInfo[DOWNLOAD_ERROR]}");
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_FILENAME: {$DownloadInfo[DOWNLOAD_FILENAME]}");
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_URL: {$DownloadInfo[DOWNLOAD_URL]}");
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_COUNT : {$DownloadInfo[DOWNLOAD_COUNT]}");
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_ISQUERYAGAIN : {$DownloadInfo[DOWNLOAD_ISQUERYAGAIN]}");
-		$this->logger("[DownloadWaiting] DownloadInfo DOWNLOAD_COOKIE : {$DownloadInfo[DOWNLOAD_COOKIE]}");
+		$this->logger("[DownloadWaiting] DownloadInfo : ".print_r($DownloadInfo,true));
 		
         return $DownloadInfo;
-    }
-  
-    private function GenerateRequest($page)
-    {
-		$this->logger("[GenerateRequest]");
-        preg_match($this->FILE_NAME_REGEX, $page, $filenamematch);
-        if(!empty($filenamematch[1]))
-        {
-            $this->TAB_REQUEST[$this->STRING_FNAME] = $filenamematch[1];
-        }
     }
     
     //Renvoie le temps d'attente indiqué sur la page, ou false s'il n'y en a pas
@@ -243,7 +233,7 @@ class SynoFileHosting
 			sleep(35);
 		}
 		
-		$this->logger("[VerifyWaitDownload] ret : ${ret}");
+		$this->logger("[VerifyWaitDownload] ret : ".print_r($ret,true));
         return $ret;
     }
   
