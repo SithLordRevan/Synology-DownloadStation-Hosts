@@ -16,7 +16,7 @@ class SynoFileHosting
     private $CookieValue;
   
     private $COOKIE_FILE = '/tmp/uptobox.cookie';
-    private $LOGIN_URL = 'https://login.uptobox.com/logarithme';
+    private $LOGIN_URL = 'https://uptobox.com/?op=login';
     private $ACCOUNT_TYPE_URL = 'https://uptobox.com/?op=my_account';
   
     private $FILE_NAME_REGEX = '/<title>(.*)<\/title>/si';
@@ -29,7 +29,6 @@ class SynoFileHosting
   
     private $STRING_COUNT = 'count';
     private $STRING_FNAME = 'fname';
-    private $QUERYAGAIN = 1;
     private $WAITING_TIME_DEFAULT = 1800;
     
     private $TAB_REQUEST = array('fname' => '');
@@ -40,10 +39,6 @@ class SynoFileHosting
 		$this->Username = $Username;
 		$this->Password = $Password;
 		$this->HostInfo = $HostInfo;
-		$this->logger("[__construct] Url: ${Url}");
-		$this->logger("[__construct] Username: ${Username}");
-		$this->logger("[__construct] Password: ${Password}");
-		$this->logger("[__construct] HostInfo: ".print_r($HostInfo,true));
 	}
   
     //se connecte et renvoie le type du compte
@@ -119,7 +114,7 @@ class SynoFileHosting
 			preg_match($this->FILE_NAME_REGEX, $page, $filenamematch);
 			if(!empty($filenamematch[1]))
 			{
-				$this->TAB_REQUEST[$this->STRING_FNAME] = $filenamematch[1];
+				$this->TAB_REQUEST[$this->STRING_FNAME] = trim($filenamematch[1]);
 			}
 		  
 			$page = $this->UrlFileFreeUrlFileFree(true);
@@ -129,7 +124,6 @@ class SynoFileHosting
 			} else {
 				$DownloadInfo[DOWNLOAD_ERROR] = ERR_FILE_NO_EXIST;
 			}
-			$DownloadInfo[DOWNLOAD_ISPARALLELDOWNLOAD] = true;
 			$DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
 			$DownloadInfo[DOWNLOAD_COOKIE] = $this->COOKIE_FILE;
         }
@@ -157,7 +151,7 @@ class SynoFileHosting
 				preg_match($this->FILE_NAME_REGEX, $page, $filenamematch);
 				if(!empty($filenamematch[1]))
 				{
-					$this->TAB_REQUEST[$this->STRING_FNAME] = $filenamematch[1];
+					$this->TAB_REQUEST[$this->STRING_FNAME] = trim($filenamematch[1]);
 				}
 				$DownloadInfo[DOWNLOAD_FILENAME] = $this->TAB_REQUEST[$this->STRING_FNAME];
 					
@@ -165,11 +159,9 @@ class SynoFileHosting
                 $result = $this->VerifyWaitDownload($page);
                 if($result != false)
                 {
-                    $DownloadInfo[DOWNLOAD_COUNT] = (int) $result[$this->STRING_COUNT];
-                    $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = (int) $this->QUERYAGAIN;
+                    $DownloadInfo[DOWNLOAD_COUNT] = $result[$this->STRING_COUNT];
                 }else
                 {
-                    
                     //clique sur le bouton "Generer le lien" et recupere la vrai URL
                     $page = $this->UrlFileFree($LoadCookie);
                     preg_match($this->FILE_URL_REGEX,$page,$urlmatch);
@@ -178,11 +170,9 @@ class SynoFileHosting
                         $DownloadInfo[DOWNLOAD_URL] = $urlmatch[1];
                     }else
                     {
-                        $DownloadInfo[DOWNLOAD_COUNT] = (int) $this->WAITING_TIME_DEFAULT;
-                        $DownloadInfo[DOWNLOAD_ISQUERYAGAIN] = (int) $this->QUERYAGAIN;
+                        $DownloadInfo[DOWNLOAD_COUNT] = $this->WAITING_TIME_DEFAULT;
                     }
                 }
-                $DownloadInfo[DOWNLOAD_ISPARALLELDOWNLOAD] = true;
             }
             if($LoadCookie == true)
             {
@@ -203,9 +193,10 @@ class SynoFileHosting
 		preg_match($this->DOWNLOAD_WAIT_REGEX, $page, $waitingmatch);
         if(!empty($waitingmatch[0]))
         {
+            $waitingtime = 0;
             if(!empty($waitingmatch[1]))
             {
-                $waitingtime = 0;
+				$waitingtime = 65;
                 preg_match('`(\d+) hour`si', $waitingmatch[1], $waitinghourmatch);
                 if(!empty($waitinghourmatch[1]))
                 {
@@ -214,11 +205,11 @@ class SynoFileHosting
                 preg_match('`(\d+) minute`si', $waitingmatch[1], $waitingminmatch);
                 if(!empty($waitingminmatch[1]))
                 {
-                    $waitingtime = $waitingtime + ($waitingminmatch[1] * 60) + 70;
+                    $waitingtime = $waitingtime + ($waitingminmatch[1] * 60);
                 }
             }else
             {
-                $waitingtime = 70;
+                $waitingtime = 65;
             }
             $ret[$this->STRING_COUNT] = $waitingtime;
         }
@@ -403,7 +394,7 @@ class SynoFileHosting
 	
 	// pour debug
 	private function logger($texte) {
-		file_put_contents("/tmp/logs.txt", $texte.PHP_EOL , FILE_APPEND);
+		// file_put_contents("/tmp/logs.txt", $texte.PHP_EOL , FILE_APPEND);
 	}
 }
 ?>
